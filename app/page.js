@@ -1,101 +1,170 @@
-import Image from "next/image";
+"use client"
+import { useState } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [formData, setFormData] = useState({
+    customerName: '',
+    customerAddress: '',
+    itemName: '',
+    quantity: 1,
+    price: 0,
+    rentalDate: '',
+    transportPrice: 0,
+  });
+  const [items, setItems] = useState([]);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const addItem = () => {
+    setItems([...items, { ...formData }]);
+    setFormData({
+      customerName: '',
+      customerAddress: '',
+      itemName: '',
+      quantity: 1,
+      price: 0,
+      rentalDate: '',
+      transportPrice: 0,
+    });
+  };
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    
+    doc.text('Invoice - Wunmi\'s Kitchen', 20, 20);
+    doc.text(`Customer: ${formData.customerName}`, 20, 30);
+    doc.text(`Address: ${formData.customerAddress}`, 20, 40);
+    doc.text(`Rental Date: ${formData.rentalDate}`, 20, 50);
+
+    const tableColumn = ['Item Name', 'Quantity', 'Price (₦)', 'Total (₦)'];
+    const tableRows = [];
+
+    items.forEach(item => {
+      const itemData = [
+        item.itemName,
+        item.quantity,
+        item.price,
+        item.quantity * item.price,
+      ];
+      tableRows.push(itemData);
+    });
+
+    doc.autoTable(tableColumn, tableRows, { startY: 60 });
+
+    // Add Transport Price
+    doc.text(`Transport Price: ₦${formData.transportPrice}`, 20, doc.lastAutoTable.finalY + 10);
+
+    // Total amount
+    const totalPrice = items.reduce((total, item) => total + item.quantity * item.price, 0) + parseFloat(formData.transportPrice);
+    doc.text(`Total: ₦${totalPrice}`, 20, doc.lastAutoTable.finalY + 20);
+
+    doc.save('invoice.pdf');
+  };
+
+  return (
+    <div className="container mx-auto p-8">
+      <h1 className="text-3xl font-bold mb-8 text-center">Invoice Generator - Wunmi's Kitchen</h1>
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Customer Name</label>
+        <input
+          type="text"
+          name="customerName"
+          value={formData.customerName}
+          onChange={handleChange}
+          className="w-full p-2 border border-gray-300 rounded"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Customer Address</label>
+        <input
+          type="text"
+          name="customerAddress"
+          value={formData.customerAddress}
+          onChange={handleChange}
+          className="w-full p-2 border border-gray-300 rounded"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Item Name</label>
+        <input
+          type="text"
+          name="itemName"
+          value={formData.itemName}
+          onChange={handleChange}
+          className="w-full p-2 border border-gray-300 rounded"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Quantity</label>
+        <input
+          type="number"
+          name="quantity"
+          value={formData.quantity}
+          onChange={handleChange}
+          className="w-full p-2 border border-gray-300 rounded"
+          min="1"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Price per Item (₦)</label>
+        <input
+          type="number"
+          name="price"
+          value={formData.price}
+          onChange={handleChange}
+          className="w-full p-2 border border-gray-300 rounded"
+          min="0"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Rental Date</label>
+        <input
+          type="date"
+          name="rentalDate"
+          value={formData.rentalDate}
+          onChange={handleChange}
+          className="w-full p-2 border border-gray-300 rounded"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Transport Price (₦)</label>
+        <input
+          type="number"
+          name="transportPrice"
+          value={formData.transportPrice}
+          onChange={handleChange}
+          className="w-full p-2 border border-gray-300 rounded"
+          required
+        />
+      </div>
+
+      <button
+        type="button"
+        className="w-full bg-blue-500 text-white p-3 rounded mb-4"
+        onClick={addItem}
+      >
+        Add Item
+      </button>
+
+      <button
+        type="button"
+        className="w-full bg-green-500 text-white p-3 rounded"
+        onClick={generatePDF}
+      >
+        Generate Invoice (PDF)
+      </button>
     </div>
   );
 }
